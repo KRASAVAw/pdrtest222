@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест з ПДР для дівчат</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f8f4ff;
+            color: #4a4458;
+        }
+        
+        .question-nav-item {
+            transition: all 0.3s ease;
+            transform: scale(1);
+        }
+        
+        .question-nav-item:hover {
+            transform: scale(1.1);
+        }
+        
+        .answer-option {
+            transition: all 0.3s ease;
+            transform: translateY(0);
+        }
+        
+        .answer-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .image-container {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .image-container:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .modal-content {
+            transition: transform 0.3s ease;
+            transform: scale(0.9);
+        }
+        
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #f0f;
+            opacity: 0;
+            z-index: 9999;
+            animation: confetti-fall 5s linear forwards;
+        }
+        
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="text-center mb-10 fade-in">
+            <h1 class="text-4xl font-bold text-purple-800 mb-2">Тест для ДАШИ</h1>
+            <p class="text-lg text-purple-600">ДЕЛАЙ ДЕЛАЙ</p>
+            <div class="w-full bg-purple-100 rounded-full h-4 mt-6">
+                <div id="progress-bar" class="progress-bar bg-purple-600 h-4 rounded-full" style="width: 0%"></div>
+            </div>
+        </header>
+
+        <div class="flex overflow-x-auto pb-4 mb-8 scrollbar-hide">
+            <div id="question-nav" class="flex space-x-2 mx-auto"></div>
+        </div>
+
+        <main class="bg-white rounded-2xl shadow-xl p-6 mb-10 fade-in" id="question-container">
+            <!-- Questions will be loaded here -->
+        </main>
+
+        <div class="flex justify-between">
+            <button id="prev-btn" class="px-6 py-3 bg-purple-100 text-purple-800 rounded-lg font-medium hover:bg-purple-200 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-arrow-left mr-2"></i> Попереднє
+            </button>
+            <button id="next-btn" class="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                Наступне <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="result-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 opacity-0 invisible">
+        <div class="modal-content bg-white rounded-2xl p-8 max-w-md w-full mx-4 relative">
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div class="text-center">
+                <div id="result-icon" class="text-6xl mb-4"></div>
+                <h2 id="result-title" class="text-3xl font-bold mb-2"></h2>
+                <p id="result-text" class="text-lg mb-6"></p>
+                <button id="restart-btn" class="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition">
+                    Пройти тест знову
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="image-modal" class="modal fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 opacity-0 invisible">
+        <div class="modal-content relative">
+            <button id="close-image-modal" class="absolute -top-12 right-0 text-white hover:text-purple-300">
+                <i class="fas fa-times text-3xl"></i>
+            </button>
+            <img id="modal-image" src="" alt="" class="max-h-[85vh] max-w-[85vw] object-contain">
+        </div>
+    </div>
+
+    <script>
+        // Questions data (original fixed order)
+        const originalQuestions = [
+    {
+        id: 367,
+        text: "Які попереджувальні сигнали повинні бути увімкнені на механічному транспортному засобі, що рухається з технічними несправностями, якщо такий рух не заборонено Правилами дорожнього руху?",
+        options: [
+            "Аварійна сигналізація разом із ближнім світлом фар.",
+            "Аварійна сигналізація.",
+            "Ближнє світло фар."
+        ],
+        correctAnswer: 1,
+        image: null
+    },
+    {
+        id: 507,
+        text: "Яка швидкість обрана правильно під час руху в темну пору доби або в умовах недостатньої видимості?",
+        options: [
+            "При якій водій мав змогу зупинити транспортний засіб у межах видимості дороги.",
+            "При якій гальмівний шлях дорівнює або не перевищує видимості у напрямку руху.",
+            "При якій гальмівний шлях перевищує видимість за напрямком руху."
+        ],
+        correctAnswer: 0,
+        image: null
+    },
+    {
+        id: 2757,
+        text: "По якій траєкторії рухається причіп легкового автомобіля при проходженні повороту?",
+        options: [
+            "Ближче до центру повороту, ніж траєкторія руху автомобіля.",
+            "Далі від центру повороту, ніж траєкторія руху автомобіля.",
+            "По траєкторії руху автомобіля."
+        ],
+        correctAnswer: 1,
+        image: null
+    },
+    {
+        id: 721,
+        text: "Чи дозволено зупинку транспортних засобів один навпроти одного, як показано на малюнку?",
+        options: [
+            "Дозволено, якщо буде можливий зустрічний роз'їзд або об'їзд транспортних засобів, що зупинилися.",
+            "Заборонено в будь-якому випадку."
+        ],
+        correctAnswer: 0,
+        image: null
+    },
+    {
+        id: 1262,
+        text: "Зображений дорожній знак встановлюється перед:",
+        options: [
+            "Місцем перехрещення з велосипедною доріжкою поза перехрестям.",
+            "Місцем, поблизу якого проходить велосипедна доріжка.",
+            "Ділянкою дороги, на якій можлива поява велосипедистів.",
+            "Відповіді 1 і 3."
+        ],
+        correctAnswer: 3,
+        image: "https://vodiy.ua/media/questions/16298.jpg"
+    },
+    {
+        id: 855,
+        text: "Які зовнішні світлові пристрої повинні бути обов'язково ввімкнені під час руху на транспортному засобі, який буксирують, у темний час доби та в умовах недостатньої видимості?",
+        options: [
+            "Аварійна світлова сигналізація.",
+            "Габаритні ліхтарі та аварійна світлова сигналізація.",
+            "Задній протитуманний ліхтар та аварійна світлова сигналізація."
+        ],
+        correctAnswer: 1,
+        image: null
+    },
+    {
+        id: 656,
+        text: "У якому місці водій автомобіля може виконати зупинку за межами населених пунктів?",
+        options: [
+            "На правому або лівому узбіччі.",
+            "Тільки на правому узбіччі.",
+            "Біля правого краю проїзної частини, якомога правіше.",
+            "Відповіді 1 і 3."
+        ],
+        correctAnswer: 1,
+        image: "https://vodiy.ua/media/questions/656_.jpg"
+    },
+    {
+        id: 1495,
+        text: "Який із зображених дорожніх знаків запроваджує обмеження максимальної швидкості руху?",
+        options: [
+            "Знак 1.",
+            "Знак 2.",
+            "Знак 3.",
+            "Знак 4."
+        ],
+        correctAnswer: 2,
+        image: "https://vodiy.ua/media/questions/16394.jpg"
+    },
+    {
+        id: 999,
+        text: "Якщо на вашій смузі є зустрічний транспортний засіб чи дозволено подати звуковий сигнал в населеному пункті?",
+        options: [
+            "Так.",
+            "Ні."
+        ],
+        correctAnswer: 0,
+        image: null
+    },
+    // Додані нові питання
+    {
+        id: 652,
+        text: "В якому місці дороги водій повинен поставити транспортний засіб на зупинку або стоянку за наявності узбіччя, придатного для зупинки або стоянки?",
+        options: [
+            "Біля правого краю проїзної частини чи на узбіччі.",
+            "Тільки на узбіччі."
+        ],
+        correctAnswer: 1,
+        image: "https://vodiy.ua/media/questions/16198.jpg"
+    },
+    {
+        id: 1357,
+        text: "Цей розпізнавальний знак встановлюється на транспортних засобах:",
+        options: [
+            "Що належать водіям-лікарям.",
+            "Якими керують водії-лікарі.",
+            "Якими керують водії з інвалідністю.",
+            "Якими керують глухі або глухонімі водії."
+        ],
+        correctAnswer: 0,
+        image: "https://vodiy.ua/media/questions/297_.jpg"
+    },
+    {
+        id: 297,
+        text: "У якому з місць пішоходам дозволено перехід проїзної частини в даній ситуації?",
+        options: [
+            "У всіх місцях.",
+            "У місцях 2 і 4.",
+            "У місці 2.",
+            "У місці 4."
+        ],
+        correctAnswer: 3,
+        image: null
+    },
+    {
+        id: 448,
+        text: "Чим у першу чергу повинен керуватися водій нерейкового транспортного засобу для визначення кількості смуг на проїзній частині?",
+        options: [
+            "Лініями горизонтальної та вертикальної дорожньої розмітки.",
+            "Тільки лініями горизонтальної дорожньої розмітки.",
+            "Тільки дорожніми знаками «Напрямок руху по смугах» і «Напрямок руху по смузі».",
+            "Відповіді 1, 2 і 3.",
+            "Дорожньою розміткою або дорожніми знаками «Напрямок руху по смугах» і «Напрямок руху по смузі»."
+        ],
+        correctAnswer: 4,
+        image: null
+    },
+    {
+        id: 844,
+        text: "Як ви повинні вчинити в ситуації, коли за пішохідним переходом утворився затор?",
+        options: [
+            "Зупинитися на пішохідному переході, залишивши місце для проходу пішоходів.",
+            "Зупинитися на пішохідному переході, тільки якщо на ньому немає пішоходів.",
+            "Зупинитися перед пішохідним переходом."
+        ],
+        correctAnswer: 2,
+        image: "https://vodiy.ua/media/questions/16393.jpg"
+    },
+    {
+        id: 1493,
+        text: "Який із зображених дорожніх знаків забороняє рух з більшою швидкістю, ніж зазначено на знакові?",
+        options: [
+            "Знак 1.",
+            "Знак 2.",
+            "Знак 3.",
+            "Знак 4.",
+            "Знак 5."
+        ],
+        correctAnswer: 4,
+        image: "https://vodiy.ua/media/questions/284_6_.jpg"
+    },
+    {
+        id: 284,
+        text: "Ви правильно виконали поворот праворуч у цій ситуації, якщо:",
+        options: [
+            "Зупинилися і, дочекавшись дозвільного сигналу регулювальника, продовжили рух.",
+            "Повернули на зображений на малюнку сигнал регулювальника, давши дорогу пішоходу.",
+            "Повернули на зображений на малюнку сигнал регулювальника, не даючи дороги пішоходам."
+        ],
+        correctAnswer: 1,
+        image: "https://vodiy.ua/media/questions/290__.jpg"
+    },
+    {
+        id: 290,
+        text: "Чи дозволено Вам (водію автомобіля) рух прямо в даній ситуації?",
+        options: [
+            "Дозволено за умови, що Ви дасте дорогу трамваю.",
+            "Дозволено тільки Вам, рух трамвая заборонено.",
+            "Заборонено."
+        ],
+        correctAnswer: 1,
+        image: "https://vodiy.ua/media/questions/3282_.jpg"
+    },
+    {
+        id: 3282,
+        text: "Поздовжня смуга на проїзній частині завширшки щонайменше 2,75 м, що позначена або не позначена дорожньою розміткою і призначена для руху нерейкових транспортних засобів це:",
+        options: [
+            "Розділювальна смуга.",
+            "Смуга руху.",
+            "Трамвайна колія."
+        ],
+        correctAnswer: 1,
+        image: null
+    },
+    {
+        id: 2143,
+        text: "Під час руху в умовах туману відстань до предметів здається:",
+        options: [
+            "Більшою, ніж насправді.",
+            "Меншою, ніж насправді.",
+            "Такою, що відповідає дійсності."
+        ],
+        correctAnswer: 0,
+        image: null
+    },
+    {
+        id: 473,
+        text: "Чи дозволено транспортному засобу, швидкість руху якого з технічних причин не перевищує 40 км/год, рухатися по крайній лівій смузі?",
+        options: [
+            "Дозволено для виконання об'їзду або перестроювання перед поворотом ліворуч чи розворотом.",
+            "Дозволено, якщо інші смуги зайняті.",
+            "Заборонено, транспортний засіб завжди має рухатися якнайближче до правого краю проїзної частини."
+        ],
+        correctAnswer: 0,
+        image: "https://vodiy.ua/media/questions/613_.jpg"
+    },
+    {
+        id: 613,
+        text: "Як повинен вчинити водій зеленого автомобіля, що рухається прямо, у даній ситуації?",
+        options: [
+            "Зупинитися перед перехрестям і дочекатися, поки мотоцикл поверне ліворуч.",
+            "Об'їхати мотоцикл праворуч, забезпечивши безпеку руху."
+        ],
+        correctAnswer: 1,
+        image: "https://vodiy.ua/media/questions/16326.jpg"
+    },
+    {
+        id: 1335,
+        text: "Який із зображених знаків зобов'язує дати дорогу транспортним засобам, що рухаються перехрещуваною дорогою на нерегульованих перехрестях?",
+        options: [
+            "Знак 1.",
+            "Знак 2.",
+            "Обидва знаки."
+        ],
+        correctAnswer: 2,
+        image: "https://vodiy.ua/media/questions/558_.jpg"
+    },
+    {
+        id: 558,
+        text: "Яка максимальна швидкість встановлена для легкових автомобілів на цій дорозі за межами населених пунктів (крім транспортних засобів, якими керують водії зі стажем до 2-х років)?",
+        options: [
+            "100 км/год.",
+            "110 км/год.",
+            "70 км/год.",
+            "80 км/год.",
+            "90 км/год."
+        ],
+        correctAnswer: 4,
+        image: null
+    },
+    {
+        id: 2167,
+        text: "Зменшення гальмівного шляху транспортного засобу досягається:",
+        options: [
+            "Гальмуванням з блокуванням коліс (юзом).",
+            "Гальмуванням на межі блокування способом переривчастого натискання на педаль гальма."
+        ],
+        correctAnswer: 1,
+        image: "https://vodiy.ua/media/questions/16531.jpg"
+    },
+    {
+        id: 2078,
+        text: "Зображений дорожній знак інформує:",
+        options: [
+            "Про початок місця зупинки автобусів.",
+            "Про місце розташування автовокзалу або автостанції.",
+            "Обидві відповіді правильні."
+        ],
+        correctAnswer: 1,
+        image: null
+    }
+];
+
+
+        // Create a copy of original questions that won't be modified
+        const questions = JSON.parse(JSON.stringify(originalQuestions));
+
+        // App state
+        let currentQuestionIndex = 0;
+        let userAnswers = Array(questions.length).fill(null);
+        let answeredQuestions = Array(questions.length).fill(false);
+
+        // DOM elements
+        const questionContainer = document.getElementById('question-container');
+        const questionNav = document.getElementById('question-nav');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const resultModal = document.getElementById('result-modal');
+        const resultTitle = document.getElementById('result-title');
+        const resultText = document.getElementById('result-text');
+        const resultIcon = document.getElementById('result-icon');
+        const restartBtn = document.getElementById('restart-btn');
+        const closeModal = document.getElementById('close-modal');
+        const imageModal = document.getElementById('image-modal');
+        const modalImage = document.getElementById('modal-image');
+        const closeImageModal = document.getElementById('close-image-modal');
+
+        // Initialize the app
+        function init() {
+            renderQuestionNav();
+            renderQuestion();
+            updateButtons();
+            
+            // Event listeners
+            prevBtn.addEventListener('click', goToPrevQuestion);
+            nextBtn.addEventListener('click', goToNextQuestion);
+            closeModal.addEventListener('click', closeResultModal);
+            restartBtn.addEventListener('click', restartTest);
+            closeImageModal.addEventListener('click', closeImageModalFunc);
+            
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft' && currentQuestionIndex > 0) {
+                    goToPrevQuestion();
+                } else if (e.key === 'ArrowRight' && currentQuestionIndex < questions.length - 1) {
+                    goToNextQuestion();
+                }
+            });
+        }
+
+        // Render question navigation
+        function renderQuestionNav() {
+            questionNav.innerHTML = '';
+            questions.forEach((question, index) => {
+                const navItem = document.createElement('div');
+                navItem.className = `question-nav-item w-10 h-10 rounded-full flex items-center justify-center font-medium cursor-pointer transition ${answeredQuestions[index] ? (userAnswers[index] === questions[index].correctAnswer ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') : 'bg-purple-100 text-purple-800'}`;
+                navItem.textContent = index + 1;
+                navItem.addEventListener('click', () => {
+                    currentQuestionIndex = index;
+                    renderQuestion();
+                    updateButtons();
+                });
+                questionNav.appendChild(navItem);
+            });
+        }
+
+        // Render current question
+        function renderQuestion() {
+            const question = questions[currentQuestionIndex];
+            let html = `
+                <div class="mb-6">
+                    <h2 class="text-xl font-semibold mb-2">Питання №${question.id}</h2>
+                    <p class="text-lg">${question.text}</p>
+                </div>
+            `;
+            
+            if (question.image) {
+                html += `
+                    <div class="image-container mb-6 rounded-lg overflow-hidden border border-gray-200" onclick="openImageModal('${question.image}')">
+                        <img src="${question.image}" alt="Зображення до питання" class="w-full h-auto">
+                        <div class="bg-gray-100 py-2 text-center text-sm text-gray-600">
+                            <i class="fas fa-search-plus mr-1"></i> Натисніть для збільшення
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '<div class="space-y-3">';
+            question.options.forEach((option, index) => {
+                let optionClass = "answer-option p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-purple-50";
+                if (userAnswers[currentQuestionIndex] !== null) {
+                    if (index === question.correctAnswer) {
+                        optionClass += " bg-green-100 border-green-300";
+                    } else if (index === userAnswers[currentQuestionIndex] && index !== question.correctAnswer) {
+                        optionClass += " bg-red-100 border-red-300";
+                    }
+                }
+                
+                html += `
+                    <div class="${optionClass}" data-answer="${index}">
+                        <div class="flex items-center">
+                            <div class="w-6 h-6 rounded-full border-2 border-purple-400 mr-3 flex items-center justify-center ${userAnswers[currentQuestionIndex] !== null && index === question.correctAnswer ? 'bg-green-500 border-green-500 text-white' : ''} ${userAnswers[currentQuestionIndex] !== null && index === userAnswers[currentQuestionIndex] && index !== question.correctAnswer ? 'bg-red-500 border-red-500 text-white' : ''}">
+                                ${userAnswers[currentQuestionIndex] !== null && index === question.correctAnswer ? '✓' : ''}
+                                ${userAnswers[currentQuestionIndex] !== null && index === userAnswers[currentQuestionIndex] && index !== question.correctAnswer ? '✗' : ''}
+                            </div>
+                            <span>${option}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            questionContainer.innerHTML = html;
+            
+            // Add event listeners to answer options
+            if (userAnswers[currentQuestionIndex] === null) {
+                document.querySelectorAll('.answer-option').forEach(option => {
+                    option.addEventListener('click', () => {
+                        const selectedAnswer = parseInt(option.dataset.answer);
+                        userAnswers[currentQuestionIndex] = selectedAnswer;
+                        answeredQuestions[currentQuestionIndex] = true;
+                        
+                        // Update UI immediately
+                        renderQuestion();
+                        renderQuestionNav();
+                        updateProgress();
+                        updateButtons();
+                        
+                        // Check if all questions are answered (for completion)
+                        if (allQuestionsAnswered()) {
+                            updateButtons();
+                        }
+                    });
+                });
+            }
+        }
+
+        // Update navigation buttons
+        function updateButtons() {
+            prevBtn.disabled = currentQuestionIndex === 0;
+            nextBtn.disabled = currentQuestionIndex === questions.length - 1 && !allQuestionsAnswered();
+            
+            if (currentQuestionIndex === questions.length - 1 && allQuestionsAnswered()) {
+                nextBtn.textContent = 'Завершити тест';
+                nextBtn.disabled = false;
+                nextBtn.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+                nextBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            } else {
+                nextBtn.textContent = 'Наступне';
+                nextBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                nextBtn.classList.add('bg-purple-600', 'hover:bg-purple-700');
+            }
+        }
+
+        // Update progress bar
+        function updateProgress() {
+            const answeredCount = userAnswers.filter(answer => answer !== null).length;
+            const progress = (answeredCount / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        // Check if all questions are answered
+        function allQuestionsAnswered() {
+            return userAnswers.every(answer => answer !== null);
+        }
+
+        // Go to previous question
+        function goToPrevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderQuestion();
+                updateButtons();
+            }
+        }
+
+        // Go to next question
+        function goToNextQuestion() {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                renderQuestion();
+                updateButtons();
+            } else if (allQuestionsAnswered()) {
+                showResults();
+            }
+        }
+
+        // Show test results
+        function showResults() {
+            const correctAnswers = userAnswers.reduce((count, answer, index) => {
+                return answer === questions[index].correctAnswer ? count + 1 : count;
+            }, 0);
+            
+            const percentage = Math.round((correctAnswers / questions.length) * 100);
+            
+            if (percentage >= 90) {
+                resultIcon.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
+                resultTitle.textContent = 'Вітаємо!';
+                resultText.textContent = `Ви успішно пройшли тест з результатом ${percentage}% правильних відповідей!`;
+                createConfetti();
+            } else {
+                resultIcon.innerHTML = '<i class="fas fa-times-circle text-red-500"></i>';
+                resultTitle.textContent = 'На жаль...';
+                resultText.textContent = `Ви не пройшли тест. Ваш результат: ${percentage}% правильних відповідей. Спробуйте ще раз!`;
+            }
+            
+            resultModal.classList.add('active');
+        }
+
+        // Create confetti effect
+        function createConfetti() {
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                confetti.style.animationDuration = `${Math.random() * 3 + 2}s`;
+                confetti.style.width = `${Math.random() * 10 + 5}px`;
+                confetti.style.height = `${Math.random() * 10 + 5}px`;
+                document.body.appendChild(confetti);
+                
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+        }
+
+        // Close result modal
+        function closeResultModal() {
+            resultModal.classList.remove('active');
+        }
+
+        // Restart test
+        function restartTest() {
+            // Reset state
+            currentQuestionIndex = 0;
+            userAnswers = Array(questions.length).fill(null);
+            answeredQuestions = Array(questions.length).fill(false);
+            
+            // Reset UI
+            renderQuestionNav();
+            renderQuestion();
+            updateButtons();
+            updateProgress();
+            closeResultModal();
+        }
+
+        // Open image modal
+        function openImageModal(src) {
+            modalImage.src = src;
+            modalImage.alt = "Зображення до питання";
+            imageModal.classList.add('active');
+        }
+
+        // Close image modal
+        function closeImageModalFunc() {
+            imageModal.classList.remove('active');
+        }
+
+        // Make openImageModal globally available
+        window.openImageModal = openImageModal;
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
